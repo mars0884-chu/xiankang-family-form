@@ -1,0 +1,24 @@
+name: Publish standalone genealogy form v0.5
+on:
+  push:
+    branches: [ main ]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build standalone index
+        run: python3 scripts/build_v04.py
+      - name: Commit index
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No index changes"
+          else
+            git commit -m "Publish standalone genealogy form v0.5"
+            git push
+          fi
