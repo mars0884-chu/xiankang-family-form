@@ -2,8 +2,7 @@ import base64
 import gzip
 from pathlib import Path
 
-parts = [Path(f"src/form-v05.part{i}.b64").read_text(encoding="utf-8").strip() for i in (1, 2, 3)]
-data = "".join(parts)
+data = Path("src/form-v05.part1.b64").read_text(encoding="utf-8").strip()
 raw = gzip.decompress(base64.b64decode(data))
 text = raw.decode("utf-8")
 
