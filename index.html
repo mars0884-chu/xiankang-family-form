@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src blob:; connect-src 'none'; font-src 'none';">
-<title>咸康（台灣）分支｜族人簡易填報工具 v0.7</title>
+<title>咸康（台灣）分支｜族人簡易填報工具 v0.8</title>
 <style>
 :root{
   --bg:#f6f1eb;--card:#fff;--ink:#2b2522;--muted:#6f655f;--line:#ded5ce;
@@ -69,7 +69,7 @@ summary{font-weight:800;cursor:pointer}
 <body>
 <main>
   <div class="card">
-    <div class="pill">第七版測試 v0.7</div>
+    <div class="pill">第八版測試 v0.8</div>
     <h1>咸康（台灣）分支｜族人簡易填報工具</h1>
     <p>不用 Excel、不用帳號、不用收件匣。一次可填多人；最後按一個按鈕，手機現場產生 Excel（有照片則產生 ZIP），並叫出原生分享選單，請直接選 LINE 傳給 Mars。</p>
   </div>
@@ -282,16 +282,24 @@ summary{font-weight:800;cursor:pointer}
     </div>
 
     <details class="card">
-      <summary>＋ 學歷／工作／重要事蹟（選填）</summary>
-      <div class="row">
-        <div><label for="pSchool">學校</label><input id="pSchool"></div>
-        <div><label for="pDegree">學歷／科系／學位</label><input id="pDegree"></div>
-        <div><label for="pJob">職務／職稱</label><input id="pJob"></div>
-        <div><label for="pPublicJob">軍職／公職（選填）</label><input id="pPublicJob" placeholder="正式軍職、公職或重要任職；一般義務役／替代役可不填"></div>
-      </div>
-      <label for="pAchievement">重大事蹟</label>
-      <textarea id="pAchievement"></textarea>
-      <p class="small">一般義務役或替代役不是本欄必填項目；除非本人／家族希望特別留存，或有正式軍職、重要職務、特殊服役事蹟，再填即可。</p>
+      <summary>＋ 學歷／學術資料（選填）</summary>
+      <p class="small"><strong>一般人物以最高學歷為主。</strong>若讀到碩士／博士，建議從大學開始填到最高學歷，碩博士可再填學位論文與指導教授。國小、國中、高中／高職完全選填；活人的早期學校名稱原則不進閱讀版。若只是想保留求學遷徙，可只填「所在地／求學地區」，不必填完整校名。</p>
+      <p class="small"><strong>論文請分清楚：</strong>本人取得學位所寫的是「學位論文」；本人自己發表的是「學術著作／研究論文」；本人擔任教授所指導的學生論文是「指導論文」。三者不混在一起。教授不必把一生所有指導論文都填進族譜，只留代表性或具家族／人物傳記價值者即可。</p>
+      <div id="educationList"></div>
+      <button type="button" class="secondary" id="addEducation">＋ 新增一筆學歷</button>
+      <hr>
+      <h3>本人學術著作／指導論文（有需要再填）</h3>
+      <div id="academicList"></div>
+      <button type="button" class="secondary" id="addAcademic">＋ 新增一筆學術資料</button>
+    </details>
+
+    <details class="card">
+      <summary>＋ 工作／職務經歷（選填，可多筆）</summary>
+      <p class="small">工作經歷不限 4～5 項；只要是人生主要職業、重要職務或具有族譜／人物傳記意義的經歷都可以新增。短期、零碎工作不要求全部填。一般義務役或替代役可不填軍職／公職；正式軍職、公職、重要任職或特殊服役事蹟再填即可。</p>
+      <div id="workList"></div>
+      <button type="button" class="secondary" id="addWork">＋ 新增一筆工作／職務</button>
+      <label for="pAchievement">其他重大事蹟（選填）</label>
+      <textarea id="pAchievement" placeholder="不屬於一般學歷或工作、但值得留在族譜的重要事蹟"></textarea>
     </details>
 
     <details class="card">
@@ -385,7 +393,7 @@ function refreshKnownNames(){
 function blankPerson(){
   return {name:'',nameStatus:'完整',gender:'',rel:'',life:'',birth:'',father:'',mother:'',spouse:'',marriage:'',spouseTitle:'',spouseSeq:'',
     extraSpouses:[],totalRank:'不詳',tradRank:'不詳',lineage:'',alias:'',era:'',courtesy:'',styleName:'',genealogyBio:'',merit:'',birthPlace:'',origin:'',nationality:'',residence:'',
-    death:'',resting:'',restingDetail:'',deathReason:'',note:'',school:'',degree:'',job:'',publicJob:'',achievement:'',abo:'',specialBlood:'',health:'',healthDisclosure:'僅主編內部使用',photos:[]};
+    death:'',resting:'',restingDetail:'',deathReason:'',note:'',educationHistory:[],academicWorks:[],workHistory:[],achievement:'',abo:'',specialBlood:'',health:'',healthDisclosure:'僅主編內部使用',photos:[]};
 }
 var draft=blankPerson();
 
@@ -425,6 +433,69 @@ $('addSpouse').addEventListener('click',function(){draft.extraSpouses.push({name
 
 function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function escAttr(s){return escHtml(s)}
+
+function renderEducation(){
+  var box=$('educationList');box.innerHTML='';
+  if(!draft.educationHistory.length){box.innerHTML='<p class="muted">尚未新增學歷。一般人物填最高學歷即可；碩博士建議從大學開始填。</p>';return}
+  draft.educationHistory.forEach(function(ed,i){
+    var d=document.createElement('div');d.className='photoItem';
+    d.innerHTML='<div class="personHead"><strong>學歷 '+(i+1)+'</strong><button type="button" class="danger" data-edu-del="'+i+'">移除</button></div>'+ 
+      '<div class="row"><div><label>教育階段</label><select data-edu-level="'+i+'"><option value="">請選擇</option><option>國小</option><option>國中</option><option>高中／高職</option><option>專科</option><option>大學</option><option>碩士</option><option>博士</option><option>其他</option></select></div>'+ 
+      '<div><label>學校名稱（可留白）</label><input data-edu-school="'+i+'" placeholder="國小／國中若顧慮隱私，可不填校名" value="'+escAttr(ed.school||'')+'"></div></div>'+ 
+      '<div class="row"><div><label>科系／學位</label><input data-edu-degree="'+i+'" placeholder="例如：歷史學系學士、教育學博士" value="'+escAttr(ed.degree||'')+'"></div>'+ 
+      '<div><label>所在地／求學地區</label><input data-edu-place="'+i+'" placeholder="可只記求學遷徙，例如：彰化、臺北、美國" value="'+escAttr(ed.place||'')+'"></div></div>'+ 
+      '<div class="row"><div><label>開始時間（選填）</label><input data-edu-start="'+i+'" value="'+escAttr(ed.start||'')+'"></div><div><label>結束／畢業時間（選填）</label><input data-edu-end="'+i+'" value="'+escAttr(ed.end||'')+'"></div></div>'+ 
+      '<label>學位論文題名（碩／博有資料再填）</label><input data-edu-thesis="'+i+'" placeholder="這是本人取得學位時所寫的論文，不是本人指導學生的論文" value="'+escAttr(ed.thesisTitle||'')+'">'+ 
+      '<div class="row"><div><label>指導教授（指導這位人物取得學位者）</label><input data-edu-advisor="'+i+'" value="'+escAttr(ed.advisor||'')+'"></div><div><label>論文 DOI／典藏連結（選填）</label><input data-edu-doi="'+i+'" value="'+escAttr(ed.doi||'')+'"></div></div>'+ 
+      '<label>補充說明</label><input data-edu-note="'+i+'" value="'+escAttr(ed.note||'')+'">'+
+      '<p class="small">活人的國小、國中、高中／高職資料預設只供主編內部整理；若有重要遷徙／傳記價值，是否公開由主編另外審查。</p>';
+    box.appendChild(d);d.querySelector('[data-edu-level="'+i+'"]').value=ed.level||'';
+  });
+}
+$('educationList').addEventListener('input',function(e){var i;['school','degree','place','start','end','thesis','advisor','doi','note'].forEach(function(a){var key='data-edu-'+a;if(e.target.hasAttribute(key)){i=+e.target.getAttribute(key);var prop={thesis:'thesisTitle'}[a]||a;draft.educationHistory[i][prop]=e.target.value}})});
+$('educationList').addEventListener('change',function(e){if(e.target.hasAttribute('data-edu-level')){var i=+e.target.getAttribute('data-edu-level');draft.educationHistory[i].level=e.target.value}});
+$('educationList').addEventListener('click',function(e){if(e.target.hasAttribute('data-edu-del')){draft.educationHistory.splice(+e.target.getAttribute('data-edu-del'),1);renderEducation()}});
+$('addEducation').addEventListener('click',function(){draft.educationHistory.push({level:'',school:'',degree:'',place:'',start:'',end:'',thesisTitle:'',advisor:'',doi:'',note:''});renderEducation()});
+
+function renderAcademic(){
+  var box=$('academicList');box.innerHTML='';
+  if(!draft.academicWorks.length){box.innerHTML='<p class="muted">沒有本人研究著作或代表性指導論文可不填。</p>';return}
+  draft.academicWorks.forEach(function(ac,i){
+    var d=document.createElement('div');d.className='photoItem';
+    d.innerHTML='<div class="personHead"><strong>學術資料 '+(i+1)+'</strong><button type="button" class="danger" data-ac-del="'+i+'">移除</button></div>'+ 
+      '<label>資料類型</label><select data-ac-type="'+i+'"><option>學術著作／研究論文</option><option>指導論文</option></select>'+ 
+      '<label>題名</label><input data-ac-title="'+i+'" value="'+escAttr(ac.title||'')+'">'+ 
+      '<div class="row"><div><label>學校／期刊／出版或研究機構</label><input data-ac-inst="'+i+'" value="'+escAttr(ac.institution||'')+'"></div><div><label>年份</label><input data-ac-year="'+i+'" value="'+escAttr(ac.year||'')+'"></div></div>'+ 
+      '<label>相關人物／角色</label><input data-ac-people="'+i+'" placeholder="研究論文可填作者；指導論文可填學生姓名與本人為指導教授" value="'+escAttr(ac.people||'')+'">'+ 
+      '<label>DOI／永久連結／書目識別（選填）</label><input data-ac-doi="'+i+'" value="'+escAttr(ac.doi||'')+'">'+ 
+      '<label>補充說明</label><input data-ac-note="'+i+'" value="'+escAttr(ac.note||'')+'">'+
+      '<p class="small">「指導論文」表示這位人物是指導教授，不代表論文由這位人物本人撰寫。</p>';
+    box.appendChild(d);d.querySelector('[data-ac-type="'+i+'"]').value=ac.type||'學術著作／研究論文';
+  });
+}
+$('academicList').addEventListener('input',function(e){['title','people','doi','note'].forEach(function(a){var key='data-ac-'+a;if(e.target.hasAttribute(key)){draft.academicWorks[+e.target.getAttribute(key)][a]=e.target.value}});if(e.target.hasAttribute('data-ac-inst'))draft.academicWorks[+e.target.getAttribute('data-ac-inst')].institution=e.target.value;if(e.target.hasAttribute('data-ac-year'))draft.academicWorks[+e.target.getAttribute('data-ac-year')].year=e.target.value});
+$('academicList').addEventListener('change',function(e){if(e.target.hasAttribute('data-ac-type'))draft.academicWorks[+e.target.getAttribute('data-ac-type')].type=e.target.value});
+$('academicList').addEventListener('click',function(e){if(e.target.hasAttribute('data-ac-del')){draft.academicWorks.splice(+e.target.getAttribute('data-ac-del'),1);renderAcademic()}});
+$('addAcademic').addEventListener('click',function(){draft.academicWorks.push({type:'學術著作／研究論文',title:'',institution:'',year:'',people:'',doi:'',note:''});renderAcademic()});
+
+function renderWork(){
+  var box=$('workList');box.innerHTML='';
+  if(!draft.workHistory.length){box.innerHTML='<p class="muted">尚未新增工作／職務。可填 1 筆、5 筆或更多，不設固定上限。</p>';return}
+  draft.workHistory.forEach(function(w,i){
+    var d=document.createElement('div');d.className='photoItem';
+    d.innerHTML='<div class="personHead"><strong>工作／職務 '+(i+1)+'</strong><button type="button" class="danger" data-work-del="'+i+'">移除</button></div>'+ 
+      '<label>類別</label><select data-work-type="'+i+'"><option>工作／職務</option><option>軍職／公職</option></select>'+ 
+      '<div class="row"><div><label>機構／單位</label><input data-work-inst="'+i+'" value="'+escAttr(w.institution||'')+'"></div><div><label>職務／職稱</label><input data-work-title="'+i+'" value="'+escAttr(w.title||'')+'"></div></div>'+ 
+      '<div class="row"><div><label>開始時間</label><input data-work-start="'+i+'" value="'+escAttr(w.start||'')+'"></div><div><label>結束時間</label><input data-work-end="'+i+'" value="'+escAttr(w.end||'')+'"></div></div>'+ 
+      '<label>地點（選填）</label><input data-work-place="'+i+'" value="'+escAttr(w.place||'')+'">'+ 
+      '<label>工作內容／補充</label><input data-work-note="'+i+'" value="'+escAttr(w.note||'')+'">';
+    box.appendChild(d);d.querySelector('[data-work-type="'+i+'"]').value=w.type||'工作／職務';
+  });
+}
+$('workList').addEventListener('input',function(e){['title','start','end','place','note'].forEach(function(a){var key='data-work-'+a;if(e.target.hasAttribute(key))draft.workHistory[+e.target.getAttribute(key)][a]=e.target.value});if(e.target.hasAttribute('data-work-inst'))draft.workHistory[+e.target.getAttribute('data-work-inst')].institution=e.target.value});
+$('workList').addEventListener('change',function(e){if(e.target.hasAttribute('data-work-type'))draft.workHistory[+e.target.getAttribute('data-work-type')].type=e.target.value});
+$('workList').addEventListener('click',function(e){if(e.target.hasAttribute('data-work-del')){draft.workHistory.splice(+e.target.getAttribute('data-work-del'),1);renderWork()}});
+$('addWork').addEventListener('click',function(){draft.workHistory.push({type:'工作／職務',institution:'',title:'',start:'',end:'',place:'',note:''});renderWork()});
 
 function photoTotalCount(excludeDraft){
   var n=0; state.people.forEach(function(p){n+=p.photos.length});
@@ -486,11 +557,11 @@ function openPerson(i){
   setVal('pFather',draft.father);setVal('pMother',draft.mother);setVal('pSpouse',draft.spouse);setVal('pMarriage',draft.marriage);setVal('pSpouseTitle',draft.spouseTitle);setVal('pSpouseSeq',draft.spouseSeq);
   setVal('pTotalRank',draft.totalRank||'不詳');setVal('pTradRank',draft.tradRank||'不詳');setVal('pLineage',draft.lineage);
   setVal('pAlias',draft.alias);setVal('pEra',draft.era);setVal('pCourtesy',draft.courtesy);setVal('pStyleName',draft.styleName);setVal('pGenealogyBio',draft.genealogyBio);setVal('pMerit',draft.merit);setVal('pBirthPlace',draft.birthPlace);setVal('pOrigin',draft.origin);setVal('pNationality',draft.nationality);setVal('pResidence',draft.residence);setVal('pDeath',draft.death);
-  setVal('pResting',draft.resting);setVal('pRestingDetail',draft.restingDetail);setVal('pDeathReason',draft.deathReason);setVal('pNote',draft.note);setVal('pSchool',draft.school);
-  setVal('pDegree',draft.degree);setVal('pJob',draft.job);setVal('pPublicJob',draft.publicJob);setVal('pAchievement',draft.achievement);setVal('pABO',draft.abo);setVal('pSpecialBlood',draft.specialBlood);setVal('pHealth',draft.health);setVal('pHealthDisclosure',draft.healthDisclosure||'僅主編內部使用');
+  setVal('pResting',draft.resting);setVal('pRestingDetail',draft.restingDetail);setVal('pDeathReason',draft.deathReason);setVal('pNote',draft.note);
+  draft.educationHistory=draft.educationHistory||[];draft.academicWorks=draft.academicWorks||[];draft.workHistory=draft.workHistory||[];setVal('pAchievement',draft.achievement);setVal('pABO',draft.abo);setVal('pSpecialBlood',draft.specialBlood);setVal('pHealth',draft.health);setVal('pHealthDisclosure',draft.healthDisclosure||'僅主編內部使用');
   Array.prototype.forEach.call(document.querySelectorAll('#relChoices button'),function(b){b.classList.toggle('active',b.getAttribute('data-rel')===draft.rel)});
   if(/^歿/.test(draft.life))show('deathFields');else hide('deathFields');
-  renderExtraSpouses();renderPhotos();show('personModal');document.body.style.overflow='hidden';
+  renderExtraSpouses();renderEducation();renderAcademic();renderWork();renderPhotos();show('personModal');document.body.style.overflow='hidden';
 }
 function clonePerson(p){
   var x=JSON.parse(JSON.stringify(p,function(k,v){return k==='file'?undefined:v}));
@@ -506,7 +577,7 @@ function collectDraft(){
   draft.totalRank=$('pTotalRank').value||'不詳';draft.tradRank=$('pTradRank').value||'不詳';draft.lineage=cleanName($('pLineage').value);
   draft.alias=cleanName($('pAlias').value);draft.era=cleanName($('pEra').value);draft.courtesy=cleanName($('pCourtesy').value);draft.styleName=cleanName($('pStyleName').value);draft.genealogyBio=$('pGenealogyBio').value;draft.merit=cleanName($('pMerit').value);draft.birthPlace=cleanName($('pBirthPlace').value);draft.origin=cleanName($('pOrigin').value);draft.nationality=cleanName($('pNationality').value);draft.residence=cleanName($('pResidence').value);
   draft.death=cleanName($('pDeath').value);draft.resting=cleanName($('pResting').value);draft.restingDetail=cleanName($('pRestingDetail').value);draft.deathReason=cleanName($('pDeathReason').value);draft.note=cleanName($('pNote').value);
-  draft.school=cleanName($('pSchool').value);draft.degree=cleanName($('pDegree').value);draft.job=cleanName($('pJob').value);draft.publicJob=cleanName($('pPublicJob').value);draft.achievement=cleanName($('pAchievement').value);draft.abo=$('pABO').value;draft.specialBlood=cleanName($('pSpecialBlood').value);draft.health=cleanName($('pHealth').value);draft.healthDisclosure=$('pHealthDisclosure').value||'僅主編內部使用';
+  draft.educationHistory=(draft.educationHistory||[]).map(function(x){return {level:cleanName(x.level),school:cleanName(x.school),degree:cleanName(x.degree),place:cleanName(x.place),start:cleanName(x.start),end:cleanName(x.end),thesisTitle:cleanName(x.thesisTitle),advisor:cleanName(x.advisor),doi:cleanName(x.doi),note:cleanName(x.note)}}).filter(function(x){return x.level||x.school||x.degree||x.place||x.thesisTitle});draft.academicWorks=(draft.academicWorks||[]).map(function(x){return {type:cleanName(x.type)||'學術著作／研究論文',title:cleanName(x.title),institution:cleanName(x.institution),year:cleanName(x.year),people:cleanName(x.people),doi:cleanName(x.doi),note:cleanName(x.note)}}).filter(function(x){return x.title||x.institution||x.people});draft.workHistory=(draft.workHistory||[]).map(function(x){return {type:cleanName(x.type)||'工作／職務',institution:cleanName(x.institution),title:cleanName(x.title),start:cleanName(x.start),end:cleanName(x.end),place:cleanName(x.place),note:cleanName(x.note)}}).filter(function(x){return x.institution||x.title||x.note});draft.achievement=cleanName($('pAchievement').value);draft.abo=$('pABO').value;draft.specialBlood=cleanName($('pSpecialBlood').value);draft.health=cleanName($('pHealth').value);draft.healthDisclosure=$('pHealthDisclosure').value||'僅主編內部使用';
 }
 function validateDraft(){
   collectDraft();
@@ -649,7 +720,7 @@ function normalizeDateInput(s){
 }
 function workbookRows(){
   var mainHeaders=['姓名*','同名／辨識補充','姓名完整狀態*','這位成員與朱家關係*','父親姓名','母親姓名','配偶／伴侶姓名','婚姻狀態','主要配偶婚配稱謂','主要配偶婚配序次','傳統排行／稱謂*','家中子女總排行*','性別*','生歿狀態*','譜名／字派名*','曾用名／其他名字*','朝代／時期','字','號','原譜傳記註記','出生日期','出生地','辭世日期','辭世緣由','籍貫','國籍','居住地*','安奉地','安奉位置補充','備註'];
-  var main=[['房系成員資料｜由族人簡易填報工具 v0.7 自動產生'],['請勿自行改工作表名稱；此檔可直接交給 Mars 使用既有匯入工具分析。'],mainHeaders];
+  var main=[['房系成員資料｜由族人簡易填報工具 v0.8 自動產生'],['請勿自行改工作表名稱；此檔可直接交給 Mars 使用既有匯入工具分析。'],mainHeaders];
   state.people.forEach(function(p){
     var disambig=p.nameStatus==='僅姓氏／名諱未詳'?['古人女性僅知姓氏',p.father&&('父：'+p.father),p.mother&&('母：'+p.mother),p.spouse&&('配偶：'+p.spouse)].filter(Boolean).join('；'):'';
     main.push([p.name,disambig,p.nameStatus||'完整',p.rel,p.father,p.mother,p.spouse,p.marriage,p.spouseTitle,p.spouseSeq,p.tradRank||'不詳',p.totalRank||'不詳',
@@ -666,16 +737,26 @@ function workbookRows(){
   });
   special.push([],['B. 特殊親子關係'],['子女姓名*','父親姓名','母親姓名','關係類型*','同名／辨識補充','未具名家長說明','備註','資料來源補充']);
 
-  var edu=[['學歷、經歷、事蹟、血型與健康｜由簡易填報工具自動產生'],['健康資料完全選填；即使填寫，預設也只供主編內部整理，不等於公開。'],
-    ['姓名*','同名／辨識補充','功名／科舉','學校','學歷／科系／學位','職務／職稱','軍職／公職','重大事蹟','ABO血型','特殊血型／血型註記','健康與疾病史（自願填寫）','健康資料公開設定','資料來源補充','補充說明']];
+  var edu=[['學歷／學術／工作／事蹟／健康｜一人可多列，一列一項｜由簡易填報工具自動產生'],
+    ['一般人物填最高學歷即可；碩博士建議大學起填。國小／國中／高中高職選填，活人早期求學預設不公開。本人學位論文、本人學術著作、本人指導之他人論文三者分開。工作經歷不設固定筆數上限。'],
+    ['姓名*','同名／辨識補充','資料類型*','階段／類別','學校／機構／單位','科系／學位／職稱','開始時間','結束／年份','題名（論文／著作／事蹟）','相關人物／角色','DOI／連結／書目識別','所在地／求學地區','內容／補充說明','ABO血型','特殊血型／血型註記','健康與疾病史（自願填寫）','健康資料公開設定','資料來源補充','備註']];
+  function eduPush(p,type,stage,inst,degree,start,end,title,people,doi,place,content,abo,special,health,hc,note){edu.push([p.name,'',type,stage||'',inst||'',degree||'',start||'',end||'',title||'',people||'',doi||'',place||'',content||'',abo||'',special||'',health||'',hc||'',state.providerName,note||'']);}
   state.people.forEach(function(p){
-    if(p.merit||p.school||p.degree||p.job||p.publicJob||p.achievement||p.abo||p.specialBlood||p.health)edu.push([p.name,'',p.merit,p.school,p.degree,p.job,p.publicJob,p.achievement,p.abo,p.specialBlood,p.health,p.healthDisclosure||'僅主編內部使用',state.providerName,'']);
+    for(const merit of String(p.merit||'').split(/[、,，;；]+/).map(function(x){return cleanName(x)}).filter(Boolean))eduPush(p,'功名／科舉','','','','','',merit,'','','','','','','','','','');
+    (p.educationHistory||[]).forEach(function(ed){
+      eduPush(p,'學歷',ed.level,ed.school,ed.degree,ed.start,ed.end,'','', '',ed.place,ed.note,'','','','','');
+      if(ed.thesisTitle)eduPush(p,'學位論文',ed.level,ed.school,ed.degree,'',ed.end,ed.thesisTitle,ed.advisor?('指導教授：'+ed.advisor):'',ed.doi,ed.place,ed.note,'','','','','');
+    });
+    (p.academicWorks||[]).forEach(function(ac){eduPush(p,ac.type||'學術著作／研究論文','',ac.institution,'','',ac.year,ac.title,ac.people,ac.doi,'',ac.note,'','','','','')});
+    (p.workHistory||[]).forEach(function(w){eduPush(p,w.type||'工作／職務','',w.institution,w.title,w.start,w.end,'','','',w.place,w.note,'','','','','')});
+    if(p.achievement)eduPush(p,'重大事蹟','','','','','',p.achievement,'','','',p.achievement,'','','','','');
+    if(p.abo||p.specialBlood||p.health)eduPush(p,'健康資料','','','','','','','','','','','',p.abo,p.specialBlood,p.health,p.healthDisclosure||'僅主編內部使用','');
   });
 
-  var disclosure=[['揭露設定｜簡易填報工具 v0.7'],['健康資料預設不公開；只有本人／資料提供者明確選「允許家族閱讀版顯示」才輸出授權。'],
-    ['姓名*','同名／辨識補充','出生日期','辭世日期','辭世緣由','安奉位置補充','血型','學校／學歷','職務／軍公職','重大事蹟','健康與疾病史']];
+  var disclosure=[['揭露設定｜簡易填報工具 v0.8'],['健康資料預設不公開；只有本人／資料提供者明確選「允許家族閱讀版顯示」才輸出授權。'],
+    ['姓名*','同名／辨識補充','出生日期','辭世日期','辭世緣由','安奉位置補充','血型','早期求學','學校／學歷','學術著作／指導','職務／軍公職','重大事蹟','健康與疾病史']];
   state.people.forEach(function(p){
-    if(p.health){disclosure.push([p.name,'','','','','','','','','',p.healthDisclosure==='允許家族閱讀版顯示'?'授權完整揭露':'不允許揭露']);}
+    if(p.health){disclosure.push([p.name,'','','','','','','','','','','',p.healthDisclosure==='允許家族閱讀版顯示'?'授權完整揭露':'不允許揭露']);}
   });
 
   var photo=[['照片與附件索引｜照片原檔會與此 Excel 一起放入回傳 ZIP'],['未勾選允許刊載的照片預設為「不允許刊載」。'],
@@ -689,12 +770,12 @@ function workbookRows(){
   });
 
   var intro=[
-    ['咸康（台灣）分支｜族人簡易填報工具 v0.7 輸出檔'],
+    ['咸康（台灣）分支｜族人簡易填報工具 v0.8 輸出檔'],
     ['資料提供者姓名*',state.providerName],
     ['與這批資料的關係*',state.providerRel],
     ['填寫日期*',date8()],
-    ['填寫工具','族人簡易填報工具 v0.7'],
-    ['說明','此 Excel 由行動填報工具 v0.7 在族人手機本機產生；範例資料不會寫入正式人物資料。']
+    ['填寫工具','族人簡易填報工具 v0.8'],
+    ['說明','此 Excel 由行動填報工具 v0.8 在族人手機本機產生；範例資料不會寫入正式人物資料。']
   ];
   var guide=[
     ['欄位說明｜簡易填報工具自動輸出'],
@@ -708,6 +789,9 @@ function workbookRows(){
     ['前妻／前夫','如果目前無其他配偶，可放在主要配偶並把關係狀態選「已離婚」；若另有現任，現任放主要配偶，前一任放「再婚或多任配偶」。前妻／前夫不是婚配稱謂。'],
     ['婚配稱謂','元配、繼配、續配、妾等屬傳統婚配稱謂；與婚姻／離婚／喪偶的關係狀態分開。序次未知不要猜。'],
     ['出生地／祖籍／國籍／居住地','出生地是本人實際出生地；祖籍／家族來源是家族傳統來源。本譜朱氏血緣後代若同為湖南慈利通常可留白，不必每人重複填；配偶或不同來源有資料再填。國籍一般可不填，外籍／雙重國籍或特殊情況再填；居住地只填國家／縣市。四者不可互相推定。'],
+    ['學歷填法','一般人物以最高學歷為主；碩博士建議從大學開始到最高學歷。國小、國中、高中／高職完全選填；活人早期學校名稱原則不公開。若要保留求學遷徙，可只填所在地／求學地區，不必填完整校名。'],
+    ['論文三分類','本人取得學位所寫＝學位論文；本人自己發表＝學術著作／研究論文；本人擔任教授指導學生所寫＝指導論文。指導論文不可當成本人著作。教授只需填代表性或具傳記價值的指導成果。'],
+    ['工作經歷','一人可填多筆，不限制4～5筆；以主要職業、重要職務與具族譜意義的經歷為主，不要求所有短期工作。'],
     ['軍職／公職','完全選填。一般義務役、替代役可不填；正式軍職、公職、重要職務或特殊服役事蹟再填。'],
     ['健康資料','完全選填、預設僅主編內部使用；只有明確授權才可出現在家族閱讀版。不得由個人健康資料推測其他家人。'],
     ['原譜有傳','原譜只標「有傳」時先記有傳；實際傳文內容日後另整理，不代表已取得全文。'],
@@ -736,7 +820,7 @@ async function makeXlsx(){
     '00_先看這裡':[28,72],
     '01_房系成員':[18,28,22,26,18,18,20,18,18,14,18,18,12,16,18,20,18,14,14,18,24,20,24,24,20,18,20,22,24,36],
     '02_特殊關係補充':[20,20,18,18,14,18,18,34,30,28],
-    '03_學經歷健康':[18,18,22,24,28,24,24,34,16,20,34,24,24,28],
+    '03_學經歷健康':[18,18,22,18,26,26,16,16,34,28,28,24,34,14,22,34,24,24,28],
     '04_揭露設定_通常不用填':[18,18,18,18,18,20,18,20,22,22,24],
     '05_照片附件':[18,34,20,22,38,28,22,36],
     '98_欄位說明':[24,70],
