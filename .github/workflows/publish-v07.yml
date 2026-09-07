@@ -1,0 +1,58 @@
+name: Publish standalone genealogy form v0.7
+on:
+  push:
+    branches: [ main ]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upgrade index to v0.7
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          t=p.read_text(encoding='utf-8')
+          reps=[
+            ('<title>咸康（台灣）分支｜族人簡易填報工具 v0.6</title>','<title>咸康（台灣）分支｜族人簡易填報工具 v0.7</title>'),
+            ('<div class="pill">第六版測試 v0.6</div>','<div class="pill">第七版測試 v0.7</div>'),
+            ('<div><label for="pOrigin">籍貫／祖籍（不是出生地）</label><input id="pOrigin" placeholder="例如：湖南慈利；不知道可留白"></div>','<div><label for="pOrigin">祖籍／家族來源（朱氏本支通常可不填）</label><input id="pOrigin" placeholder="本支朱氏同為湖南慈利可留白；配偶或不同家族來源有資料再填"></div>'),
+            ('<div><label for="pNationality">國籍</label><input id="pNationality" placeholder="例如：中華民國、英國；不知道可留白"></div>','<div><label for="pNationality">國籍（通常可不填）</label><input id="pNationality" placeholder="外籍、雙重國籍或特殊情況有資料再填，例如：英國"></div>'),
+            ('<p class="small"><strong>籍貫不等於出生地。</strong>例如「出生於臺北、祖籍湖南慈利」，出生地填臺北，籍貫／祖籍填湖南慈利；國籍再另外填。</p>','<p class="small"><strong>四個欄位用途不同：</strong>出生地＝本人實際出生的地方；祖籍／家族來源＝家族傳統來源，本譜朱氏血緣後代若同為湖南慈利通常可留白，不必每人重複填；配偶或不同家族來源有資料再填。國籍通常可留白，外籍／雙重國籍或特殊情況再填。居住地只填國家／縣市，不填門牌。不要由其中一欄推測另一欄。</p>'),
+            ("'籍貫*','國籍','居住地*'","'籍貫','國籍','居住地*'"),
+            ("房系成員資料｜由族人簡易填報工具 v0.6 自動產生","房系成員資料｜由族人簡易填報工具 v0.7 自動產生"),
+            ("p.deathReason,p.origin||'不詳',p.nationality","p.deathReason,p.origin,p.nationality"),
+            ("揭露設定｜簡易填報工具 v0.6","揭露設定｜簡易填報工具 v0.7"),
+            ("咸康（台灣）分支｜族人簡易填報工具 v0.6 輸出檔","咸康（台灣）分支｜族人簡易填報工具 v0.7 輸出檔"),
+            ("['填寫工具','族人簡易填報工具 v0.6']","['填寫工具','族人簡易填報工具 v0.7']"),
+            ("行動填報工具 v0.6 在族人手機本機產生","行動填報工具 v0.7 在族人手機本機產生"),
+            ("['籍貫／出生地／國籍','三者分開：出生地是實際出生地點；籍貫／祖籍是家族來源；國籍是法律上的國籍，不可互相代填。']","['出生地／祖籍／國籍／居住地','出生地是本人實際出生地；祖籍／家族來源是家族傳統來源。本譜朱氏血緣後代若同為湖南慈利通常可留白，不必每人重複填；配偶或不同來源有資料再填。國籍一般可不填，外籍／雙重國籍或特殊情況再填；居住地只填國家／縣市。四者不可互相推定。']"),
+          ]
+          changed=0
+          for old,new in reps:
+            if old in t:
+              t=t.replace(old,new)
+              changed+=1
+            elif new not in t:
+              raise SystemExit('missing expected text: '+old[:80])
+          assert '第七版測試 v0.7' in t
+          assert '祖籍／家族來源（朱氏本支通常可不填）' in t
+          assert "'籍貫','國籍','居住地*'" in t
+          assert "p.deathReason,p.origin,p.nationality" in t
+          assert 'raw.githack' not in t.lower() and 'jotform' not in t.lower() and 'baseball-GM' not in t
+          p.write_text(t,encoding='utf-8',newline='\n')
+          print('v0.7 replacements applied:',changed)
+          PY
+      - name: Commit index
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No index changes"
+          else
+            git commit -m "Publish standalone genealogy form v0.7"
+            git push
+          fi
