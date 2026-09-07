@@ -1,0 +1,55 @@
+name: Publish genealogy form v0.9
+on:
+  push:
+    branches: [ main ]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upgrade index to v0.9
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          t=p.read_text(encoding='utf-8')
+          t=t.replace('v0.8','v0.9').replace('第八版測試 v0.9','第九版測試 v0.9')
+          old='''<details class="card">\n      <summary>＋ 工作／職務經歷（選填，可多筆）</summary>\n      <p class="small">工作經歷不限 4～5 項；只要是人生主要職業、重要職務或具有族譜／人物傳記意義的經歷都可以新增。短期、零碎工作不要求全部填。一般義務役或替代役可不填軍職／公職；正式軍職、公職、重要任職或特殊服役事蹟再填即可。</p>'''
+          new='''<details class="card">\n      <summary>＋ 工作／職務／軍職／公職經歷（選填，可多筆）</summary>\n      <p class="small">工作經歷不限 4～5 項；只要是人生主要職業、重要職務或具有族譜／人物傳記意義的經歷都可以新增。短期、零碎工作不要求全部填。</p>\n      <div class="privacy card" style="margin:10px 0;padding:12px 14px">\n        <strong>軍職／公職請只填適合家族保存的概括資料。</strong>\n        <div class="small">軍職可填軍種、概括階級、任職年代與已公開的重要事蹟；公職可填公開的機關層級、職稱與任職年代。一般義務役／替代役不要求填；若想留下服役經歷，可只寫「曾服陸軍義務役」「曾服替代役」等概括內容。</div>\n        <div class="small" style="margin-top:6px"><strong>請勿填：</strong>現役部隊番號、精確駐地、任務／行動內容、兵籍號或人事編號、內線／聯絡資訊、承辦案件細節、內部系統名稱／帳號、安全查核、未公開組織或其他機敏資料。現職／在世軍公職人員只填已公開且適合家族保存的資訊。</div>\n      </div>'''
+          if old not in t:
+              raise SystemExit('work section marker missing')
+          t=t.replace(old,new,1)
+          old="<label>類別</label><select data-work-type=\"'+i+'\"><option>工作／職務</option><option>軍職／公職</option></select>"
+          new="<label>類別</label><select data-work-type=\"'+i+'\"><option>工作／職務</option><option>軍職</option><option>公職</option></select>"
+          if old not in t:
+              raise SystemExit('work option marker missing')
+          t=t.replace(old,new,1)
+          t=t.replace("['姓名*','同名／辨識補充','出生日期','辭世日期','辭世緣由','安奉位置補充','血型','早期求學','學校／學歷','學術著作／指導','職務／軍公職','重大事蹟','健康與疾病史']","['姓名*','同名／辨識補充','出生日期','辭世日期','辭世緣由','安奉位置補充','血型','早期求學','學校／學歷','學術著作／指導','工作／職務','軍職／公職','重大事蹟','健康與疾病史']")
+          t=t.replace("['軍職／公職','完全選填。一般義務役、替代役可不填；正式軍職、公職、重要職務或特殊服役事蹟再填。']","['軍職／公職','完全選填。軍職可記軍種、概括階級、任職年代與已公開重要事蹟；公職可記公開的機關層級、職稱與年代。一般義務役／替代役不要求填。請勿填現役部隊番號、精確駐地、任務內容、兵籍號／人事編號、內線、承辦案件、內部系統帳號、安全查核或其他未公開機敏資訊。現職／在世軍公職人員只填已公開且適合家族保存的資料。']")
+          old="['工作經歷','一人可填多筆，不限制4～5筆；以主要職業、重要職務與具族譜意義的經歷為主，不要求所有短期工作。'],"
+          if old in t:
+              t=t.replace(old,old+"\n    ['軍公職閱讀原則','活人／現職軍公職的細節預設採保守揭露；沒有明確授權時，閱讀版只應呈現概括的軍職／公職經歷，不輸出可能涉及部隊、駐地、任務、內部承辦或身分編號等細節。'],",1)
+          old="var disclosure=[['揭露設定｜簡易填報工具 v0.9'],['健康資料預設不公開；只有本人／資料提供者明確選「允許家族閱讀版顯示」才輸出授權。'],"
+          new="var disclosure=[['揭露設定｜簡易填報工具 v0.9'],['健康資料預設不公開。軍職／公職與一般工作分開管理；活人軍公職細節預設保守揭露，沒有明確授權不公開敏感細節。'],"
+          if old not in t:
+              raise SystemExit('disclosure intro missing')
+          t=t.replace(old,new,1)
+          t=t.replace("['說明','此 Excel 由行動填報工具 v0.9 在族人手機本機產生；範例資料不會寫入正式人物資料。']","['說明','此 Excel 由行動填報工具 v0.9 在族人手機本機產生；範例資料不會寫入正式人物資料。軍職／公職請勿填現役部隊番號、精確駐地、任務內容、兵籍號／人事編號、內部承辦或其他機敏資料。']")
+          assert '第九版測試 v0.9' in t
+          assert '<option>軍職</option><option>公職</option>' in t
+          assert '兵籍號／人事編號' in t
+          p.write_text(t,encoding='utf-8',newline='\n')
+          PY
+      - name: Commit v0.9
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No index changes"
+          else
+            git commit -m "Publish standalone genealogy form v0.9"
+            git push
+          fi
