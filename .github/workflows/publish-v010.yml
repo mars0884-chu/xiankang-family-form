@@ -1,0 +1,93 @@
+name: Publish genealogy form v0.10
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/publish-v010.yml'
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upgrade exact v0.9 index to v0.10
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          p=Path('index.html')
+          t=p.read_text(encoding='utf-8')
+          t=t.replace('v0.9','v0.10').replace('第九版測試 v0.10','第十版測試 v0.10')
+
+          old='''      <label for="pSpouse">主要配偶／伴侶姓名</label>
+                <input id="pSpouse" list="knownNames" placeholder="現任、唯一一任；若目前單身也可填前妻／前夫">
+                <p class="small"><strong>前妻／前夫怎麼填：</strong>如果目前沒有其他配偶，就把前妻／前夫填在這裡，婚姻狀態選「已離婚（前妻／前夫）」；如果目前另有配偶，這裡填現任，前一任請到下方「再婚或多任配偶」新增一段。</p>'''
+          new='''      <label for="pSpouse">主要配偶／伴侶姓名</label>
+                <input id="pSpouse" list="knownNames" placeholder="只填一個主要姓名；現任、唯一一任，或目前單身時的前妻／前夫">
+                <p class="small"><strong>同一人有中文名＋英文名：</strong>這一格只填一個主要姓名，不要把兩個名字一起塞在同一格。若要完整保存另一個名字，最好也把配偶本人新增成一位家人，再把另一姓名填在他的「曾用名／其他名字」。若這裡只填一個具名配偶、但沒有另外新增人物卡，匯入工具可先建立最小配偶節點；若偵測到疑似多個姓名混在同一格，會停止自動建立並交給主編確認。</p>
+                <p class="small"><strong>前妻／前夫怎麼填：</strong>如果目前沒有其他配偶，就把前妻／前夫填在這裡，婚姻狀態選「已離婚（前妻／前夫）」；如果目前另有配偶，這裡填現任，前一任請到下方「再婚或多任配偶」新增一段。</p>'''
+          if old not in t: raise SystemExit('spouse block marker missing')
+          t=t.replace(old,new,1)
+
+          old='''    <details class="card">
+                <summary>＋ 工作／職務／軍職／公職經歷（選填，可多筆）</summary>
+                <p class="small">工作經歷不限 4～5 項；只要是人生主要職業、重要職務或具有族譜／人物傳記意義的經歷都可以新增。短期、零碎工作不要求全部填。</p>
+                <div class="privacy card" style="margin:10px 0;padding:12px 14px">
+                  <strong>軍職／公職請只填適合家族保存的概括資料。</strong>
+                  <div class="small">軍職可填軍種、概括階級、任職年代與已公開的重要事蹟；公職可填公開的機關層級、職稱與任職年代。一般義務役／替代役不要求填；若想留下服役經歷，可只寫「曾服陸軍義務役」「曾服替代役」等概括內容。</div>
+                  <div class="small" style="margin-top:6px"><strong>請勿填：</strong>現役部隊番號、精確駐地、任務／行動內容、兵籍號或人事編號、內線／聯絡資訊、承辦案件細節、內部系統名稱／帳號、安全查核、未公開組織或其他機敏資料。現職／在世軍公職人員只填已公開且適合家族保存的資訊。</div>
+                </div>'''
+          new='''    <details class="card">
+                <summary>＋ 工作／職務／公職經歷（選填，可多筆）</summary>
+                <p class="small">工作經歷不限 4～5 項；只要是人生主要職業、重要職務或具有族譜／人物傳記意義的經歷都可以新增。短期、零碎工作不要求全部填。</p>
+                <div class="privacy card" style="margin:10px 0;padding:12px 14px">
+                  <strong>軍旅職涯直接當「工作／職務」填，不另外標成軍職。</strong>
+                  <div class="small">例如曾為職業軍人，可把機構／單位填「中華民國陸軍」、職務／職稱填「上校」等概括資料；一般義務役／替代役不要求填。公務／公職若值得入譜，可選「公職」。</div>
+                  <div class="small" style="margin-top:6px"><strong>請勿填：</strong>現役部隊番號、精確駐地、任務／行動內容、兵籍號或人事編號、內線／聯絡資訊、承辦案件細節、內部系統名稱／帳號、安全查核、未公開組織／編制或其他機敏資料。只填已公開且適合家族保存的資訊。</div>
+                </div>'''
+          if old not in t: raise SystemExit('work block marker missing')
+          t=t.replace(old,new,1)
+
+          old='''<label>類別</label><select data-work-type="'+i+'"><option>工作／職務</option><option>軍職</option><option>公職</option></select>'''
+          new='''<label>類別</label><select data-work-type="'+i+'"><option>工作／職務</option><option>公職</option></select>'''
+          if old not in t: raise SystemExit('work select marker missing')
+          t=t.replace(old,new,1)
+
+          t=t.replace("['一般人物填最高學歷即可；碩博士建議大學起填。國小／國中／高中高職選填，活人早期求學預設不公開。本人學位論文、本人學術著作、本人指導之他人論文三者分開。工作經歷不設固定筆數上限。'],","['一般人物填最高學歷即可；碩博士建議大學起填。國小／國中／高中高職選填，活人早期求學預設不公開。本人學位論文、本人學術著作、本人指導之他人論文三者分開。工作經歷不設固定筆數上限；軍旅職涯歸工作／職務，不另設軍職分類。'],")
+
+          old="""  var disclosure=[['揭露設定｜簡易填報工具 v0.10'],['健康資料預設不公開。軍職／公職與一般工作分開管理；活人軍公職細節預設保守揭露，沒有明確授權不公開敏感細節。'],
+              ['姓名*','同名／辨識補充','出生日期','辭世日期','辭世緣由','安奉位置補充','血型','早期求學','學校／學歷','學術著作／指導','工作／職務','軍職／公職','重大事蹟','健康與疾病史']];"""
+          new="""  var disclosure=[['揭露設定｜簡易填報工具 v0.10'],['健康資料預設不公開。軍旅職涯併入一般工作／職務；公職仍可獨立保守揭露。任何工作若涉及軍事或政府內部機敏資料，都不應填入問卷。'],
+              ['姓名*','同名／辨識補充','出生日期','辭世日期','辭世緣由','安奉位置補充','血型','早期求學','學校／學歷','學術著作／指導','工作／職務','公職','重大事蹟','健康與疾病史']];"""
+          if old not in t: raise SystemExit('disclosure header marker missing')
+          t=t.replace(old,new,1)
+
+          old="""    if(p.health){disclosure.push([p.name,'','','','','','','','','','','',p.healthDisclosure==='允許家族閱讀版顯示'?'授權完整揭露':'不允許揭露']);}"""
+          new="""    if(p.health){disclosure.push([p.name,'','','','','','','','','','',p.healthDisclosure==='允許家族閱讀版顯示'?'授權完整揭露':'不允許揭露']);}"""
+          if old not in t: raise SystemExit('health disclosure marker missing')
+          t=t.replace(old,new,1)
+
+          t=t.replace("['說明','此 Excel 由行動填報工具 v0.10 在族人手機本機產生；範例資料不會寫入正式人物資料。軍職／公職請勿填現役部隊番號、精確駐地、任務內容、兵籍號／人事編號、內部承辦或其他機敏資料。']","['說明','此 Excel 由行動填報工具 v0.10 在族人手機本機產生；範例資料不會寫入正式人物資料。軍旅職涯請當工作／職務填；任何軍事或公職工作都不要填現役部隊番號、精確駐地、任務內容、兵籍號／人事編號、內部承辦或其他機敏資料。']")
+          t=t.replace("['軍公職閱讀原則','活人／現職軍公職的細節預設採保守揭露；沒有明確授權時，閱讀版只應呈現概括的軍職／公職經歷，不輸出可能涉及部隊、駐地、任務、內部承辦或身分編號等細節。'],","['軍旅工作原則','軍旅職涯直接歸在工作／職務，不另外標成軍職。只保存與族譜有意義且適合公開的概括職涯，不輸出部隊番號、精確駐地、任務、身分編號等機敏細節。'],")
+          t=t.replace("['軍職／公職','完全選填。軍職可記軍種、概括階級、任職年代與已公開重要事蹟；公職可記公開的機關層級、職稱與年代。一般義務役／替代役不要求填。請勿填現役部隊番號、精確駐地、任務內容、兵籍號／人事編號、內線、承辦案件、內部系統帳號、安全查核或其他未公開機敏資訊。現職／在世軍公職人員只填已公開且適合家族保存的資料。'],","['公職','完全選填。公職可記公開的機關層級、職稱與年代；軍旅職涯請改用工作／職務。一般義務役／替代役不要求填。請勿填人事編號、內線、承辦案件、內部系統帳號、安全查核或其他未公開機敏資訊。'],")
+
+          anchor="['婚配稱謂','元配、繼配、續配、妾等屬傳統婚配稱謂；與婚姻／離婚／喪偶的關係狀態分開。序次未知不要猜。'],"
+          insert=anchor+"\n    ['配偶姓名／其他名字','主要配偶欄只填一個主要姓名。同一人另有中文名、英文名或曾用名時，最好把配偶本人也新增一張人物卡，再把另一姓名填入「曾用名／其他名字」；不要把兩個姓名擠在同一格。'],"
+          if anchor not in t: raise SystemExit('guide anchor missing')
+          t=t.replace(anchor,insert,1)
+
+          raw=t.encode('utf-8')
+          got=hashlib.sha256(raw).hexdigest()
+          expected='e648ac481dd855626f1235ad2bba4890105727486b26dd97f92eb6160f1db0c4'
+          if got!=expected: raise SystemExit('v0.10 hash mismatch: '+got)
+          p.write_bytes(raw)
+          print('v0.10 exact SHA-256',got)
+          PY
+      - name: Commit index.html
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Publish genealogy form v0.10 military-as-work and spouse-name safeguards"
+          git push
