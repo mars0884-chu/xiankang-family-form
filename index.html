@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src blob:; connect-src 'none'; font-src 'none';">
-<title>咸康（台灣）分支｜族人簡易填報工具 v0.11</title>
+<title>咸康（台灣）分支｜族人簡易填報工具 v0.11.1</title>
 <style>
 :root{
   --bg:#f6f1eb;--card:#fff;--ink:#2b2522;--muted:#6f655f;--line:#ded5ce;
@@ -69,7 +69,7 @@ summary{font-weight:800;cursor:pointer}
 <body>
 <main>
   <div class="card">
-    <div class="pill">第十一版測試 v0.11</div>
+    <div class="pill">第十一版相容修正 v0.11.1</div>
     <h1>咸康（台灣）分支｜族人簡易填報工具</h1>
     <p>不用 Excel、不用帳號、不用收件匣。一次可填多人；最後按一個按鈕，手機現場產生 Excel（有照片則產生 ZIP），並叫出原生分享選單，請直接選 LINE 傳給 Mars。</p>
   </div>
@@ -113,10 +113,10 @@ summary{font-weight:800;cursor:pointer}
     <div id="validation"></div>
     <div class="actions">
       <button class="secondary" id="backPeople">返回修改</button>
-      <button class="primary" id="shareBtn">完成並分享給 Mars</button>
+      <button class="primary" id="shareBtn">完成並回傳給 Mars</button>
       <button class="ghost" id="downloadBtn">只儲存檔案</button>
     </div>
-    <p class="small">按「完成並分享給 Mars」後，若手機支援檔案分享，會直接跳出原生分享選單；請選 LINE → Mars。系統不能替您自動選聯絡人或自動送出。</p>
+    <p class="small">按「完成並回傳給 Mars」後，會先嘗試直接叫出手機分享選單；若 LINE／Android 內建瀏覽器不支援，會自動改成下載 Excel／ZIP。資料不會因此消失，也不必重新填寫。</p>
     <p id="resultName" class="ok"></p>
   </section>
 </main>
@@ -873,7 +873,27 @@ async function buildOutput(){
   return {blob:xlsx,name:xlsxName,type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',xlsx:xlsx,xlsxName:xlsxName};
 }
 function downloadBlob(blob,name){
-  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},2000);
+  var url='';
+  try{
+    url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url;a.download=name;a.style.display='none';
+    document.body.appendChild(a);a.click();
+    setTimeout(function(){try{URL.revokeObjectURL(url)}catch(e){}try{a.remove()}catch(e){}},5000);
+    return true;
+  }catch(e){
+    try{if(url)URL.revokeObjectURL(url)}catch(_){}
+    return false;
+  }
+}
+function saveFallback(out){
+  if(downloadBlob(out.blob,out.name)){
+    $('resultName').textContent='✅ 此瀏覽器無法直接分享，已自動改成下載檔案：'+out.name+'。請到「檔案／下載」找到它，再用 LINE 傳給 Mars。';
+    toast('已自動改用下載檔案');
+  }else{
+    $('resultName').textContent='⚠️ 這個 App 內建瀏覽器同時阻擋分享與下載。已填資料仍留在本頁；請不要關閉，改用右上角選單以 Chrome／Safari／Edge 開啟同一網址。';
+    toast('此內建瀏覽器阻擋檔案回傳');
+  }
 }
 async function prepareOutput(){
   $('shareBtn').disabled=true;$('downloadBtn').disabled=true;$('resultName').textContent='正在產生檔案…';
@@ -881,36 +901,69 @@ async function prepareOutput(){
   finally{$('shareBtn').disabled=false;$('downloadBtn').disabled=false}
 }
 $('downloadBtn').addEventListener('click',async function(){
-  var out=await prepareOutput();downloadBlob(out.blob,out.name);toast('已產生 '+out.name);
+  var out=await prepareOutput();
+  if(downloadBlob(out.blob,out.name)){
+    $('resultName').textContent='✅ 已下載：'+out.name+'。請到「檔案／下載」找到它。';
+    toast('已產生 '+out.name);
+  }else{
+    $('resultName').textContent='⚠️ 目前瀏覽器阻擋下載；請改用 Chrome／Safari／Edge 開啟同一網址。';
+    toast('瀏覽器阻擋下載');
+  }
 });
 $('shareBtn').addEventListener('click',async function(){
-  var out=await prepareOutput(),file=new File([out.blob],out.name,{type:out.type});
+  var out=await prepareOutput(),file=null;
   try{
-    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-      $('resultName').textContent='分享視窗即將開啟：請選 LINE → Mars。';
-      await navigator.share({files:[file],title:'族譜資料填報',text:'族譜資料填報｜填寫人：'+state.providerName});
-      $('resultName').textContent='✅ 分享動作已完成。檔名：'+out.name;
-    }else{
-      $('resultName').textContent='⚠️ 此瀏覽器不能直接分享這個檔案，請改按「只儲存檔案」。';
-      toast('此瀏覽器不支援直接檔案分享');
+    if(typeof File!=='undefined')file=new File([out.blob],out.name,{type:out.type});
+  }catch(e){file=null}
+
+  if(navigator.share && file){
+    var canTry=true;
+    if(navigator.canShare){
+      try{canTry=!!navigator.canShare({files:[file]})}catch(e){canTry=false}
     }
-  }catch(e){
-    if(e&&e.name==='AbortError'){$('resultName').textContent='已取消分享，資料仍留在這個頁面，可再次按分享。'}
-    else{$('resultName').textContent='⚠️ 分享沒有完成，請改按「只儲存檔案」。';toast('分享未完成')}
+    if(canTry){
+      try{
+        $('resultName').textContent='分享視窗即將開啟：請選 LINE → Mars。';
+        await navigator.share({files:[file],title:'族譜資料填報',text:'族譜資料填報｜填寫人：'+state.providerName});
+        $('resultName').textContent='✅ 分享動作已完成。檔名：'+out.name;
+        return;
+      }catch(e){
+        if(e&&e.name==='AbortError'){
+          $('resultName').textContent='已取消分享，資料仍留在這個頁面，可再次按「完成並回傳給 Mars」。';
+          return;
+        }
+      }
+    }
   }
+  saveFallback(out);
 });
 
 
 function checkShareCapability(){
-  var box=$('shareCap');
+  var box=$('shareCap'),ok=false,unknown=false;
   try{
-    var f=new File([new Blob(['test'])],'測試.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    if(navigator.share && navigator.canShare && navigator.canShare({files:[f]})){
-      box.className='card privacy';box.innerHTML='<strong>✅ 這個瀏覽器支援直接分享檔案。</strong><br><span class="small">填完後可直接叫出手機分享選單；請選 LINE → Mars。</span>';
-    }else{
-      box.className='card notice';box.innerHTML='<strong>⚠️ 這個瀏覽器目前沒有回報可直接分享 Excel。</strong><br><span class="small">仍可填寫；完成時會提供儲存檔案。這一項正是本版要實機測的相容性。</span>';
+    if(navigator.share){
+      if(navigator.canShare && typeof File!=='undefined'){
+        try{
+          var f=new File([new Blob(['test'])],'測試.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+          ok=!!navigator.canShare({files:[f]});
+        }catch(e){ok=false}
+      }else{
+        unknown=true;
+      }
     }
-  }catch(e){box.className='card notice';box.innerHTML='<strong>⚠️ 無法預先確認分享能力。</strong><br><span class="small">請照常測試到最後一步。</span>'}
+  }catch(e){}
+
+  if(ok){
+    box.className='card privacy';
+    box.innerHTML='<strong>✅ 這個瀏覽器支援直接分享檔案。</strong><br><span class="small">填完後會直接叫出手機分享選單；請選 LINE → Mars。</span>';
+  }else if(unknown){
+    box.className='card notice';
+    box.innerHTML='<strong>ℹ️ 無法預先確認檔案分享能力。</strong><br><span class="small">可以照常填；完成時會先嘗試直接分享，若失敗會自動改成下載 Excel／ZIP，不必重填。</span>';
+  }else{
+    box.className='card notice';
+    box.innerHTML='<strong>ℹ️ 這個瀏覽器可能不支援直接分享檔案。</strong><br><span class="small">仍可正常填寫；完成時會自動改成下載 Excel／ZIP，不必重填。</span>';
+  }
 }
 
 // ---------- 初始 ----------
