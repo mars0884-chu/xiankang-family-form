@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>三里朱氏私人族譜系統｜互動原型 v0.1.1</title>
+<style>
+:root{--bg:#f6f2ed;--card:#fff;--ink:#2e2926;--muted:#6e625b;--line:#ded4cc;--brand:#7b2f3d;--ok:#286a45;--warn:#9a651f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Microsoft JhengHei",sans-serif;line-height:1.6}
+main{max-width:820px;margin:auto;padding:16px 14px 70px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.035)}
+h1{font-size:26px;margin:4px 0 8px}h2{font-size:21px;margin:0 0 8px}label{display:block;font-weight:700;margin:12px 0 4px}
+input,select,textarea{width:100%;padding:12px;border:1.5px solid #bdb3ab;border-radius:11px;font:inherit;background:#fff}textarea{min-height:90px}
+button{font:inherit;font-weight:800;border:0;border-radius:11px;padding:12px 14px;cursor:pointer}.primary{background:var(--brand);color:white}.secondary{background:#ece5df}.ghost{background:white;border:1px solid var(--line)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.actions button{flex:1 1 160px}.small{font-size:14px;color:var(--muted)}.hidden{display:none!important}.ok{color:var(--ok);font-weight:800}.warn{color:var(--warn);font-weight:800}
+.pill{display:inline-block;background:#efe7e1;border-radius:999px;padding:4px 9px;font-size:13px;margin-right:6px}.person{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}
+.topbar{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.notice{border-left:5px solid #d79a39;background:#fff9ec}.privacy{border-left:5px solid var(--ok);background:#f0f8f3}.admin{border-left:5px solid #6673a8;background:#f3f5ff}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+</style>
+</head>
+<body><main>
+<div class="card notice"><span class="pill">完全虛構測試資料</span><span class="pill">原型 v0.1.1</span><h1>三里朱氏私人族譜系統｜互動原型</h1><p>這是瀏覽器測試版，不含正式族譜資料，也不會寄信或連到真正後端。</p></div>
+
+<section id="login" class="card">
+<h2>族人登入</h2>
+<p class="small">第一關：姓名＋出生年月日。正式版只讓「已發布族譜中的在世人物」申請登入。</p>
+<label for="name">姓名</label><input id="name" autocomplete="off" placeholder="測試：朱測試孝">
+<label for="dob">出生年月日</label><input id="dob" type="date">
+<div class="actions"><button id="nextBtn" class="primary" type="button">下一步</button></div>
+<p id="loginMsg" class="small"></p>
+</section>
+
+<section id="emailStep" class="card hidden">
+<h2>Email 驗證</h2>
+<p>確認族人資格後，輸入 Email。正式版才會自動寄驗證碼。</p>
+<label for="email">Email</label><input id="email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com">
+<div class="actions"><button id="sendBtn" class="primary" type="button">寄送驗證碼</button><button id="backBtn" class="secondary" type="button">返回</button></div>
+<div id="demoCode" class="card privacy hidden"></div>
+<label for="code">驗證碼</label><input id="code" inputmode="numeric" maxlength="6" placeholder="6位數">
+<label for="secret">第二層家族通關語</label><input id="secret" autocomplete="off" placeholder="本原型測試答案：三里">
+<p class="small">正式版只會顯示提示，不會顯示答案；主編可日後更換。</p>
+<div class="actions"><button id="loginBtn" class="primary" type="button">登入</button></div>
+<p id="emailMsg" class="small"></p>
+</section>
+
+<section id="reader" class="hidden">
+<div class="card topbar"><div><strong id="welcome"></strong><div class="small">閱讀版：v0.1-demo</div></div><button id="logoutBtn" class="ghost" type="button">登出</button></div>
+<div class="card privacy"><strong>閱讀原則：</strong>族人只能看已發布版；新增或修改都先進待審區，不會直接修改 MASTER。</div>
+<div class="card"><h2>族譜人物</h2><div id="people"></div><div class="actions"><button id="addBtn" class="primary" type="button">＋ 新增家族成員</button></div></div>
+<div class="card"><h2>我的投稿</h2><div id="mySubs" class="small">目前沒有投稿。</div></div>
+</section>
+
+<section id="editPanel" class="card hidden">
+<h2 id="editTitle">補充／更正</h2><input id="targetId" type="hidden">
+<label for="field">要修改的欄位</label><select id="field"><option>出生地</option><option>工作／職務</option><option>學歷</option><option>備註</option></select>
+<label for="newValue">新內容</label><textarea id="newValue"></textarea>
+<label for="source">資料來源</label><select id="source"><option>本人陳述</option><option>家族口述</option><option>證書／文件</option><option>其他</option></select>
+<div class="actions"><button id="submitEditBtn" class="primary" type="button">送出待審</button><button id="cancelEditBtn" class="secondary" type="button">取消</button></div>
+</section>
+
+<section id="addPanel" class="card hidden">
+<h2>新增家族成員</h2>
+<label for="addName">姓名</label><input id="addName">
+<label for="addRel">與朱氏關係</label><input id="addRel" placeholder="例如：子女、配偶">
+<label for="addDob">出生年月日</label><input id="addDob" type="date">
+<label for="addNote">補充說明</label><textarea id="addNote"></textarea>
+<div class="actions"><button id="submitAddBtn" class="primary" type="button">送出待審</button><button id="cancelAddBtn" class="secondary" type="button">取消</button></div>
+</section>
+
+<script>
+(function(){
+"use strict";
+var persons=[
+ {id:"P900001",name:"朱測試孝",dob:"1970-01-15",alive:true,summary:"虛構測試人物；出生地：台北市。"},
+ {id:"P900002",name:"朱測試正",dob:"1995-06-30",alive:true,summary:"虛構測試人物；學歷：測試大學。"},
+ {id:"P900003",name:"朱測試安",dob:"1940-02-02",alive:false,summary:"虛構已故人物；不開放登入。"}
+];
+var current=null,otp="",submissions=[];
+function q(id){return document.getElementById(id)}
+function show(id){q(id).classList.remove("hidden")}
+function hide(id){q(id).classList.add("hidden")}
+function escapeHtml(v){return String(v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function step1(){
+ var n=q("name").value.trim(), d=q("dob").value;
+ var p=persons.find(function(x){return x.name===n && x.dob===d});
+ if(!p){q("loginMsg").innerHTML='<span class="warn">資料不符。請使用測試姓名「朱測試孝」與生日 1970-01-15。</span>';return}
+ if(!p.alive){q("loginMsg").innerHTML='<span class="warn">此人物不具登入資格。</span>';return}
+ current=p; hide("login"); show("emailStep"); q("loginMsg").textContent="";
+}
+function backLogin(){hide("emailStep");show("login")}
+function sendCode(){
+ var e=q("email").value.trim();
+ if(!/^\S+@\S+\.\S+$/.test(e)){q("emailMsg").textContent="請輸入有效 Email";return}
+ otp=String(Math.floor(100000+Math.random()*900000));
+ show("demoCode");
+ q("demoCode").innerHTML='<strong>原型測試：</strong>正式版才會寄信；本次驗證碼為 <span class="mono">'+otp+'</span>';
+ q("emailMsg").textContent="";
+}
+function finishLogin(){
+ if(!otp){q("emailMsg").textContent="請先按「寄送驗證碼」";return}
+ if(q("code").value.trim()!==otp){q("emailMsg").textContent="驗證碼不正確";return}
+ if(q("secret").value.trim()!=="三里"){q("emailMsg").textContent="第二層家族通關語不正確";return}
+ hide("emailStep");show("reader");q("welcome").textContent="歡迎，"+current.name;renderPeople();renderMySubs();
+}
+function renderPeople(){
+ q("people").innerHTML=persons.map(function(p){
+  return '<div class="person"><strong>'+escapeHtml(p.name)+'</strong> <span class="pill">'+escapeHtml(p.id)+'</span><div class="small">'+escapeHtml(p.summary)+'</div>'+(p.alive?'<div class="actions"><button class="secondary edit-person" type="button" data-id="'+p.id+'">補充／更正此人</button></div>':'')+'</div>';
+ }).join("");
+ Array.prototype.forEach.call(document.querySelectorAll(".edit-person"),function(btn){btn.addEventListener("click",function(){openEdit(btn.getAttribute("data-id"))})});
+}
+function openEdit(id){q("targetId").value=id;q("editTitle").textContent="補充／更正｜"+persons.find(function(x){return x.id===id}).name;show("editPanel");q("editPanel").scrollIntoView()}
+function submitEdit(){
+ var p=persons.find(function(x){return x.id===q("targetId").value}),val=q("newValue").value.trim(); if(!val)return;
+ submissions.push({sid:"S"+Date.now(),by:current.name,person:p.name,type:"修改",field:q("field").value,value:val,status:"待審"});
+ hide("editPanel");q("newValue").value="";renderMySubs();alert("已送入待審區；不會直接修改 MASTER。");
+}
+function submitAdd(){
+ var n=q("addName").value.trim();if(!n)return;
+ submissions.push({sid:"S"+Date.now(),by:current.name,person:n,type:"新增人物",field:"",value:"關係："+q("addRel").value+"；生日："+q("addDob").value+"；"+q("addNote").value,status:"待審"});
+ hide("addPanel");renderMySubs();alert("新增人物已送入待審區。");
+}
+function renderMySubs(){
+ var mine=submissions.filter(function(s){return current&&s.by===current.name});
+ q("mySubs").innerHTML=mine.length?mine.map(function(s){return '<div class="person"><strong>'+escapeHtml(s.type+"｜"+s.person)+'</strong><div>'+escapeHtml((s.field?s.field+"：":"")+s.value)+'</div><div class="small">狀態：'+escapeHtml(s.status)+'</div></div>'}).join(""):"目前沒有投稿。";
+}
+function logout(){current=null;hide("reader");hide("editPanel");hide("addPanel");show("login");q("name").value="";q("dob").value="";q("email").value="";q("code").value="";q("secret").value="";hide("demoCode")}
+q("nextBtn").addEventListener("click",step1);
+q("sendBtn").addEventListener("click",sendCode);
+q("backBtn").addEventListener("click",backLogin);
+q("loginBtn").addEventListener("click",finishLogin);
+q("logoutBtn").addEventListener("click",logout);
+q("addBtn").addEventListener("click",function(){show("addPanel");q("addPanel").scrollIntoView()});
+q("submitAddBtn").addEventListener("click",submitAdd);
+q("cancelAddBtn").addEventListener("click",function(){hide("addPanel")});
+q("submitEditBtn").addEventListener("click",submitEdit);
+q("cancelEditBtn").addEventListener("click",function(){hide("editPanel")});
+})();
+</script>
+</main></body></html>
