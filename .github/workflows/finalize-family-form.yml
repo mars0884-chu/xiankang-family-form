@@ -46,7 +46,7 @@ jobs:
         run: |
           grep -q '正式確定版｜離線填報・LINE 手動回傳' index.html
           grep -q '系統不會自動把資料傳給 Mars' index.html
-          grep -q '族人填報表_正式確定版.html' <(find . -maxdepth 1 -type f -printf '%f\n')
+          test -f '族人填報表_正式確定版.html'
       - name: Commit finalized files
         run: |
           git config user.name 'github-actions[bot]'
