@@ -1,0 +1,56 @@
+name: Finalize family form
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/finalize-family-form.yml'
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Finalize wording and create stable named copy
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          t=p.read_text(encoding='utf-8')
+          reps={
+            '<title>咸康（台灣）分支｜族人簡易填報工具 v0.11.1</title>':'<title>咸康（台灣）分支｜族人填報表｜正式確定版</title>',
+            '<div class="pill">第十一版相容修正 v0.11.1</div>':'<div class="pill">正式確定版｜離線填報・LINE 手動回傳</div>',
+            '<p>不用 Excel、不用帳號、不用收件匣。一次可填多人；最後按一個按鈕，手機現場產生 Excel（有照片則產生 ZIP），並叫出原生分享選單，請直接選 LINE 傳給 Mars。</p>':'<p>不用 Excel、不用帳號、不用收件匣。一次可填多人；完成後會在手機本機產生 Excel（有照片則產生 ZIP），並開啟原生分享選單。<strong>系統不會自動送出</strong>，請在分享選單選 LINE → Mars → 實際按送出。</p>',
+            '<button class="primary" id="shareBtn">完成並回傳給 Mars</button>':'<button class="primary" id="shareBtn">產生檔案並開啟分享</button>',
+            '<p class="small">按「完成並回傳給 Mars」後，會先嘗試直接叫出手機分享選單；若 LINE／Android 內建瀏覽器不支援，會自動改成下載 Excel／ZIP。資料不會因此消失，也不必重新填寫。</p>':'<p class="small"><strong>重要：</strong>本工具不會自動把資料傳給 Mars。按「產生檔案並開啟分享」後，請在分享選單選 LINE → Mars → 送出；若瀏覽器不支援分享，會改成下載 Excel／ZIP，此時仍需自行把下載檔傳給 Mars。只有在 LINE 聊天室看到檔案訊息，才算完成回傳。</p>',
+            "$('resultName').textContent='✅ 此瀏覽器無法直接分享，已自動改成下載檔案：'+out.name+'。請到「檔案／下載」找到它，再用 LINE 傳給 Mars。';":"$('resultName').textContent='⚠️ 尚未回傳給 Mars。此瀏覽器無法直接分享，已改成下載檔案：'+out.name+'。請到「檔案／下載」找到它，再用 LINE 傳給 Mars。';",
+            "$('resultName').textContent='✅ 分享動作已完成。檔名：'+out.name;":"$('resultName').textContent='✅ 手機分享流程已完成。請再確認 LINE 與 Mars 的聊天室中已看到這個檔案：'+out.name+'；本頁無法確認 LINE 是否實際送達。';",
+            "box.innerHTML='<strong>✅ 這個瀏覽器支援直接分享檔案。</strong><br><span class=\"small\">填完後會直接叫出手機分享選單；請選 LINE → Mars。</span>';":"box.innerHTML='<strong>✅ 這個瀏覽器支援直接分享檔案。</strong><br><span class=\"small\">填完後會叫出手機分享選單；仍需由你選 LINE → Mars → 送出，系統不會自動替你傳送。</span>';"
+          }
+          for old,new in reps.items():
+              if old not in t:
+                  raise SystemExit('marker missing: '+old[:100])
+              t=t.replace(old,new,1)
+          p.write_text(t,encoding='utf-8')
+          Path('族人填報表_正式確定版.html').write_text(t,encoding='utf-8')
+
+          r=Path('README.md')
+          rt=r.read_text(encoding='utf-8')
+          rt=rt.replace('目前階段：v0.11 行動填報實測。','目前狀態：正式確定版。技術基底為 v0.11.1（Android／LINE 相容修正）。')
+          rt=rt.replace('核心流程：LINE 點網址 → 填寫多人 → 手機本機產生 Excel／ZIP → 原生分享選單 → LINE 傳給 Mars。','核心流程：LINE 點網址 → 填寫多人 → 手機本機產生 Excel／ZIP → 原生分享選單 → 使用者手動選 LINE → Mars → 送出。這不是自動上傳；只有在 LINE 聊天室看到檔案訊息，才算完成回傳。若內建瀏覽器不支援檔案分享，系統會改成下載 Excel／ZIP，之後仍需自行透過 LINE 傳給 Mars。')
+          r.write_text(rt,encoding='utf-8')
+          PY
+      - name: Validate required markers
+        run: |
+          grep -q '正式確定版｜離線填報・LINE 手動回傳' index.html
+          grep -q '系統不會自動把資料傳給 Mars' index.html
+          grep -q '族人填報表_正式確定版.html' <(find . -maxdepth 1 -type f -printf '%f\n')
+      - name: Commit finalized files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html README.md '族人填報表_正式確定版.html'
+          git commit -m 'Finalize family form and clarify LINE return flow'
+          git push
