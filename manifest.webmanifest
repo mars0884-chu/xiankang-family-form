@@ -1,0 +1,13 @@
+{
+  "name": "三里朱氏｜族人填報工具",
+  "short_name": "三里朱氏填報",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f1eb",
+  "theme_color": "#742b39",
+  "icons": [
+    {"src":"app-icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"app-icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
