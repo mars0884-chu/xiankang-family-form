@@ -1,0 +1,30 @@
+# PUBLIC repository: only blank genealogy forms and public-safe guidance belong here.
+# This helps avoid accidental commits; .gitignore does NOT protect files already committed.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Private genealogy records, source attachments, and backup archives.
+*.xlsx
+*.xls
+*.csv
+*.zip
+*.7z
+*.rar
+*.doc
+*.docx
+*.pdf
+*.ged
+*.gedcom
+
+# Private working directories.
+private/
+backup/
+backups/
+MASTER/
+原始來源/
+歷史備份/
+族人填報/
